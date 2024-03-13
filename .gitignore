@@ -7,4 +7,4 @@
 
 #variable files
 *.tfvars
-.terraform*
+.terraform*#variable files
