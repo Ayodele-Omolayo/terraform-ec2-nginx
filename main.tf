@@ -9,6 +9,7 @@ variable "env_prefix" {}
 variable "my-ip" {}
 variable "public_key_location" {}
 
+
 resource "aws_vpc" "myapp-vpc" {
   cidr_block = var.vpc_cidr_blocks
   tags = {
@@ -128,34 +129,37 @@ resource "aws_default_security_group" "default-sg" {
   
 }
 
-data "aws_ami" "latest-amazon-linux-machine" {
-  most_recent = true
-  owners = [ "137112412989" ]
-  filter {
-    name = "name"
-    values = [ "al2023-ami-2023.3.20240304.0-kernel-6.1-*" ]
+# data "aws_ami" "latest-amazon-linux-machine" {
+#   most_recent = true
+#   owners = [ "137112412989" ]
+#   filter {
+#     name = "name"
+#     values = [ "al2023-ami-2023.3.20240304.0-kernel-6.1-*" ]
     
-  }
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+#   }
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
   
-}
-output "aws_ami" {
-  value = data.aws_ami.latest-amazon-linux-machine.id
-  
-}
+# }
 
-resource "aws_key_pair" "ssh-key" {
+# resource "aws_key_pair" "ssh-key" {
+#   key_name   = "server-key"
+#   public_key = file(var.public_key_location)
+  
+# }
+
+
+resource "aws_key_pair" "deployer" {
   key_name   = "server-key"
-  public_key = file(var.public_key_location)
+  public_key = var.public_key_location
+  
 }
-
 
 
 resource "aws_instance" "myapp-server" {
-  ami = data.aws_ami.latest-amazon-linux-machine.id
+  ami = "ami-074254c177d57d640"
   instance_type = "t2.micro"
   
   subnet_id = aws_subnet.myapp-subnet-1.id
@@ -163,11 +167,21 @@ resource "aws_instance" "myapp-server" {
   availability_zone = var.avail_zone
 
   associate_public_ip_address = true
-  key_name = aws_key_pair.ssh-key.key_name
+  key_name = aws_key_pair.deployer.key_name
+
+  user_data = file("entry-script.sh")
 
   tags = {
     Name :"${var.env_prefix}-instance"
+    foo : "bar"
   }
+}
+
+
+
+output "public_key" {
+  value = aws_instance.myapp-server.public_ip
+
 }
 
 
