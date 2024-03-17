@@ -8,6 +8,8 @@ variable "avail_zone" {}
 variable "env_prefix" {}
 variable "my-ip" {}
 variable "public_key_location" {}
+variable "private_key_location" {}
+
 
 
 resource "aws_vpc" "myapp-vpc" {
@@ -106,7 +108,7 @@ resource "aws_default_security_group" "default-sg" {
     from_port = 22
     to_port = 22
     protocol = "tcp"
-    cidr_blocks = [ var.my-ip ]
+    cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
     from_port = 8080
@@ -153,7 +155,7 @@ resource "aws_default_security_group" "default-sg" {
 
 resource "aws_key_pair" "deployer" {
   key_name   = "server-key"
-  public_key = var.public_key_location
+  public_key = file(var.public_key_location)
   
 }
 
@@ -161,7 +163,7 @@ resource "aws_key_pair" "deployer" {
 resource "aws_instance" "myapp-server" {
   ami = "ami-074254c177d57d640"
   instance_type = "t2.micro"
-  
+   
   subnet_id = aws_subnet.myapp-subnet-1.id
   vpc_security_group_ids = [aws_default_security_group.default-sg.id]
   availability_zone = var.avail_zone
@@ -171,6 +173,23 @@ resource "aws_instance" "myapp-server" {
 
   user_data = file("entry-script.sh")
 
+# Using provisions
+  # connection{
+  #   type = "ssh"
+  #   host = self.public_ip
+  #   user = "ec2-user"
+  #   private_key = file(var.private_key_location)
+  # }
+
+  # provisioner "file" {
+  #   sources = "entry-script.sh"
+  #   destination = "/home/ec2-user/entry-script-on-ec2.sh"
+
+  # }
+  # provisioner "remote-exec" {
+  #   script = file("entry-script-on-ec2 .sh")
+  # }
+ 
   tags = {
     Name :"${var.env_prefix}-instance"
     foo : "bar"
